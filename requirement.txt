@@ -1,0 +1,13 @@
+pip3 install openai==1.65.4
+pip3 install vllm==0.8.5
+pip3 install evaluate
+pip3 install deepspeed
+pip3 install transformers
+pip3 install accelerate
+pip3 install trl
+pip3 install peft
+pip3 install evaluate
+pip3 install datasets
+pip3 install math_verify
+pip3 install git+https://github.com/hendrycks/math.git
+pip3 install httpx==0.23.3
