@@ -19,14 +19,28 @@ First, we need set up the vllm server, here we can choose DeepSeek-R1 Series mod
 cd build_data_cot_compresstion
 bash run_vllm_LM.sh
 ```
-And then, run Full Cot inference.
+And then, run Full Thinking Cot inference.
 ```bash
-python build_complete_thinking_dataset.py
+python build_complete_thinking_dataset.py \
+    --dataset_path /path/to/dataset.jsonl \
+    --model_name 'DeepSeek-R1-Distill-Qwen-7B' \
+    --tokenizer_path "/root/DeepSeek-R1-Distill-Qwen-7B" \
+    --base_url "http://localhost:8019/v1" \
+    --api_key "token-abc123" \
+    --output_file "/root/think_ada/inference_complete_thinking_cot_deepscaler.jsonl" \
 ```
-Build
+
+Build Compressed Thinking COT inference.
 
 ```bash
-python build_masking_thinking_dataset.py
+python build_masking_thinking_dataset.py \
+    --dataset_path "/root/think_ada/inference_complete_thinking_cot_deepscaler.jsonl" \
+    --model_name 'DeepSeek-R1-Distill-Qwen-7B' \
+    --tokenizer_path "/root/DeepSeek-R1-Distill-Qwen-7B" \
+    --base_url "http://localhost:8019/v1" \
+    --api_key "token-abc123" \
+    --output_file "inference_masking_thinking_cot_deepscaler.jsonl" \
+    --mask_ratio 0.8 \
 ```
 
 # Two-Stage Training
