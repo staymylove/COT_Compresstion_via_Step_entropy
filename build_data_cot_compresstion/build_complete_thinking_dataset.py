@@ -120,11 +120,11 @@ def compute_neg_plogp(log_p_list):
         neg_plogp_list.append(neg_plogp)
     return neg_plogp_list
 
-tokenizer = AutoTokenizer.from_pretrained("/root/DeepSeek-R1-Distill-Qwen-7B", trust_remote_code=True)
-math = load("competition_math") 
 
-async def generate_single_answer(client, question: str, model_name: str) -> str:
+async def generate_single_answer(client, question: str, model_name: str, tokenizer_path: str) -> str:
     """Generate a single answer for a question using the language model."""
+    
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
     
     problem = question
     
@@ -205,14 +205,17 @@ async def evaluate_single_problem(
     prob: dict,
     client: AsyncOpenAI,
     model_name: str,
+    tokenizer_path: str,
     sem: asyncio.Semaphore
 ) -> dict:
     async with sem:
         try:
             # print("Evaluating problem: {}".format(prob["question"]))
             
+            math = load("competition_math") 
+            
             # Generate single answer
-            answer, step_entropy_dict1 = await generate_single_answer(client, prob["question"], model_name)
+            answer, step_entropy_dict1 = await generate_single_answer(client, prob["question"], model_name, tokenizer_path)
             if answer is None:
                 return None
             
@@ -251,41 +254,47 @@ async def evaluate_single_problem(
 async def save_results_async(output_file: str, data: dict):
     async with aiofiles.open(output_file, 'a') as f:
         await f.write(json.dumps(data) + '\n')
-# async def save_results_async(output_file: str, data: dict):
-#     try:
-#         
-#         os.makedirs(os.path.dirname(output_file), exist_ok=True)
-#         async with aiofiles.open(output_file, 'a') as f:
-#             await f.write(json.dumps(data) + '\n')
-#         print(f"Results saved to {output_file}")
-#     except Exception as e:
-#         print(f"Error saving results: {str(e)}")
 
-async def main(debug: bool = False, resume: bool = False):
+
+async def main(
+    dataset_path: str,
+    model_name: str, 
+    tokenizer_path: str,
+    base_url: str,
+    api_key: str,
+    output_file: str,
+    debug: bool = False, 
+    resume: bool = False,
+    max_concurrent: int = 30
+):
     # Initialize the AsyncOpenAI client
     client = AsyncOpenAI(
-        base_url="http://localhost:8019/v1",
-        api_key="token-abc123"
+        base_url=base_url,
+        api_key=api_key
     )
     
-    model_name = "DeepSeek-R1-Distill-Qwen-7B"
-    
-    # Load problems from test500.jsonl
+    # Load problems from dataset
     problems = []
-    with open('/root/think_ada/dataset/deepscaler.json', 'r') as f:
-        problem = json.load(f)
-        for i in problem:
-            problems.append({
-                'question': i['problem'],
-                'expected_answer': i['answer']
-            })
-    # with open('/data/think_ada/dataset/aime2025-I.jsonl', 'r') as f:
-    #     for line in f:
-    #         problem = json.loads(line)
-    #         problems.append({
-    #             'question': problem['question'],
-    #             'expected_answer': problem['answer']
-    #         })
+    
+    # Handle different dataset formats
+    if dataset_path.endswith('.json'):
+        with open(dataset_path, 'r') as f:
+            problem = json.load(f)
+            for i in problem:
+                problems.append({
+                    'question': i['problem'],
+                    'expected_answer': i['answer']
+                })
+    elif dataset_path.endswith('.jsonl'):
+        with open(dataset_path, 'r') as f:
+            for line in f:
+                problem = json.loads(line)
+                problems.append({
+                    'question': problem['question'],
+                    'expected_answer': problem['answer']
+                })
+    else:
+        raise ValueError("Dataset file must be either .json or .jsonl format")
         
     # If debug flag is active, only evaluate the first 50 problems
     if debug:
@@ -294,11 +303,6 @@ async def main(debug: bool = False, resume: bool = False):
         print("DEBUG MODE: processing only the first 50 problems.")
 
     # If resume flag is active, skip already evaluated problems
-    output_file = "inference_complete_thinking_cot_deepscaler.jsonl"
-    # output_dir = os.path.dirname(output_file)
-    # if output_dir: 
-    #     os.makedirs(output_dir, exist_ok=True)
-
     if resume:
         if os.path.exists(output_file):
             # Deduplicate the results file
@@ -328,11 +332,11 @@ async def main(debug: bool = False, resume: bool = False):
             print("No previous evaluation results found. Starting from scratch.")
 
     # Create a semaphore to limit concurrent tasks
-    sem = asyncio.Semaphore(30)  # Adjust the number based on your needs
+    # sem = asyncio.Semaphore(max_concurrent)
     
     # Create tasks for each problem
     tasks = [
-        asyncio.create_task(evaluate_single_problem(prob, client, model_name, sem))
+        asyncio.create_task(evaluate_single_problem(prob, client, model_name, tokenizer_path, sem))
         for prob in problems
     ]
     
@@ -357,9 +361,42 @@ async def main(debug: bool = False, resume: bool = False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--debug", default = True, help="Run in debug mode (only evaluate the first 50 problems)")
-    parser.add_argument("--resume", default = False, help="Resume evaluation by skipping already evaluated problems")
-    args = parser.parse_args()
-    asyncio.run(main(debug=args.debug, resume=args.resume)) 
+    parser = argparse.ArgumentParser(description="Math problem evaluation script")
     
+    # Model configuration
+    parser.add_argument("--model_name", type=str, default="DeepSeek-R1-Distill-Qwen-7B", 
+                       help="Model name to use for evaluation")
+    parser.add_argument("--tokenizer_path", type=str, default="/root/DeepSeek-R1-Distill-Qwen-7B",
+                       help="Path to tokenizer")
+    parser.add_argument("--base_url", type=str, default="http://localhost:8019/v1",
+                       help="Base URL for the API")
+    parser.add_argument("--api_key", type=str, default="token-abc123",
+                       help="API key for authentication")
+    
+    # Dataset configuration
+    parser.add_argument("--dataset_path", type=str, default="/root/think_ada/dataset/deepscaler.json",
+                       help="Path to the dataset file (.json or .jsonl)")
+    parser.add_argument("--output_file", type=str, default="inference_complete_thinking_cot_deepscaler.jsonl",
+                       help="Output file path for results")
+    
+    # Execution options
+    parser.add_argument("--debug", action="store_true", default=False,
+                       help="Run in debug mode (only evaluate the first 50 problems)")
+    parser.add_argument("--resume", action="store_true", default=False,
+                       help="Resume evaluation by skipping already evaluated problems")
+    # parser.add_argument("--max_concurrent", type=int, default=30,
+    #                    help="Maximum number of concurrent requests")
+    
+    args = parser.parse_args()
+    
+    asyncio.run(main(
+        dataset_path=args.dataset_path,
+        model_name=args.model_name,
+        tokenizer_path=args.tokenizer_path,
+        base_url=args.base_url,
+        api_key=args.api_key,
+        output_file=args.output_file,
+        debug=args.debug,
+        resume=args.resume
+        # max_concurrent=args.max_concurrent
+    ))
