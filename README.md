@@ -1,7 +1,15 @@
-# COT Compression via Step Entropy
 
-Our paper: Compressing Chain-of-Thought in LLMs via Step Entropy
 
+<br />
+<p align="center">
+  <h1 align="center">Compressing Chain-of-Thought in LLMs via Step Entropy </h1>
+  <p align="center">
+    <a href='https://arxiv.org/abs/2508.03346'>
+      <img src='https://img.shields.io/badge/Paper-PDF-red?style=flat&logo=arXiv&logoColor=red' alt='Paper PDF'>
+    </a>
+   
+  </p>
+</p>
 
 # Environment
 To set up the environment, run the following commands:
