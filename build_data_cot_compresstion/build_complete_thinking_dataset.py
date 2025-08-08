@@ -332,7 +332,7 @@ async def main(
             print("No previous evaluation results found. Starting from scratch.")
 
     # Create a semaphore to limit concurrent tasks
-    # sem = asyncio.Semaphore(max_concurrent)
+    sem = asyncio.Semaphore(max_concurrent)
     
     # Create tasks for each problem
     tasks = [
@@ -384,8 +384,8 @@ if __name__ == "__main__":
                        help="Run in debug mode (only evaluate the first 50 problems)")
     parser.add_argument("--resume", action="store_true", default=False,
                        help="Resume evaluation by skipping already evaluated problems")
-    # parser.add_argument("--max_concurrent", type=int, default=30,
-    #                    help="Maximum number of concurrent requests")
+    parser.add_argument("--max_concurrent", type=int, default=30,
+                       help="Maximum number of concurrent requests")
     
     args = parser.parse_args()
     
@@ -398,5 +398,5 @@ if __name__ == "__main__":
         output_file=args.output_file,
         debug=args.debug,
         resume=args.resume
-        # max_concurrent=args.max_concurrent
+        max_concurrent=args.max_concurrent
     ))
