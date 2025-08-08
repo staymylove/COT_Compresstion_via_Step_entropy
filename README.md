@@ -14,10 +14,20 @@ bash requirement.sh
 
 
 # COT Compression 
+First, we need set up the vllm server, here we can choose DeepSeek-R1 Series models, Qwen3 (reasoning mode), QwQ-32B and S1-32B. 
 ```bash
-
+cd build_data_cot_compresstion
+bash run_vllm_LM.sh
 ```
+And then, run Full Cot inference.
+```bash
+python build_complete_thinking_dataset.py
+```
+Build
 
+```bash
+python build_masking_thinking_dataset.py
+```
 
 # Two-Stage Training
 
