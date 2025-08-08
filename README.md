@@ -51,7 +51,8 @@ deepspeed --num_gpus=8 sft.py
 ```
 ```bash
 cd stage2_rl_training
-bash run_grpo_train.sh
+bash run_trl_vllm.sh
+bash run_grpo.sh
 ```
 
 # Citation
