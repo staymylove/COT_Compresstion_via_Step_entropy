@@ -46,9 +46,13 @@ python build_masking_thinking_dataset.py \
 # Two-Stage Training
 
 ```bash
-
+cd stage1_sft_training
+deepspeed --num_gpus=8 sft.py 
 ```
-
+```bash
+cd stage2_rl_training
+bash run_grpo_train.sh
+```
 
 # Citation
 
